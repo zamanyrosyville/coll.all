@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function u() { return get(/databases/$(db)/documents/users/$(request.auth.uid)).data; }
+    function ok() { return request.auth != null && exists(/databases/$(db)/documents/users/$(request.auth.uid)) && u().active == true; }
+    function adm() { return ok() && u().perms.admin == true; }
+
+    // أول أدمن فقط: يُنشأ مرة واحدة
+    match /meta/config {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.adminUid == request.auth.uid;
+    }
+    match /meta/{d} { allow read: if ok(); allow write: if adm(); }
+
+    match /users/{uid} {
+      allow read: if request.auth != null && (request.auth.uid == uid || adm());
+      allow create: if request.auth != null && (adm() ||
+        (request.auth.uid == uid && get(/databases/$(db)/documents/meta/config).data.adminUid == uid && request.resource.data.perms.admin == true));
+      allow update, delete: if adm();
+    }
+    match /entities/{id} { allow read: if ok(); allow write: if adm(); }
+    match /hist/{id} {
+      allow read: if ok() && (u().scope == 'all' || id in u().entities);
+      allow write: if adm();
+    }
+    match /entries/{id} {
+      allow read: if ok() && (u().scope == 'all' || resource.data.ek in u().entities);
+      allow create: if ok() && u().perms.enter == true
+        && request.resource.data.keys().hasOnly(['ek','d','a','p','kg','cu','nw','note','st','by','byName','ts'])
+        && request.resource.data.st == 'pending' && request.resource.data.by == request.auth.uid
+        && request.resource.data.a is number && request.resource.data.a >= 0
+        && (u().scope == 'all' || request.resource.data.ek in u().entities);
+      allow update: if ok() && u().perms.review == true
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['st','rn','rv','rvName','rvUid','a'])
+        && request.resource.data.st in ['approved','rejected','pending'];
+      allow delete: if false;
+    }
+    match /audit/{id} {
+      allow read: if ok() && (u().perms.audit == true || u().perms.admin == true);
+      allow create: if ok() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+  }
+}
