@@ -10,7 +10,7 @@ const TP={mgr:{enter:1,results:1,scope:'nodes'},staff:{enter:1,results:1,scope:'
 const NT=['شركة','قطاع','منطقة','فرع','فريق','مدير','فرد','مندوب','تيلي سيلز'];
 let S={tab:'res',month:'',pend:true,sel:'',cmp:'',as:'tree',rf:'pending',live:[],users:[],aud:[],eu:null,nf:null,hn:'',rp:{p:'month',node:'',wk:''}},ME=null,UID=null,N={},NL=[],V=new Set(),TY=[],HR=[],unsubs=[],SETUP=false,LOG=null;
 const $=q=>document.querySelector(q),f=n=>Math.round(n).toLocaleString('en-US'),now=new Date(),cm=now.toISOString().slice(0,7),td=now.toISOString().slice(0,10);
-function toast(m){const t=$('#t');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',3500)}
+function toast(m){const t=$('#t');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',9000)}
 const errm=e=>({'auth/invalid-credential':'رقم الموبايل أو كلمة السر غير صحيحة','auth/email-already-in-use':'هذا الرقم مسجل بالفعل','auth/weak-password':'كلمة السر لازم تكون 6 أحرف على الأقل','permission-denied':'ليس لديك صلاحية لهذه العملية'}[e.code]||e.message);
 const tn=t=>t?((TY.find(x=>x.id===t)||{n:'نوع محذوف'}).n):'غير مفصّل',lbl=id=>N[id]?N[id].path.map(i=>N[i]?N[i].name:'').join(' › '):'؟';
 const pf=p=>{const o={};for(let i=0;i<6;i++)o['n'+i]=p[i]||'';return o};
@@ -76,7 +76,9 @@ return '<div class="p"><h2>المعاينة</h2><p>الشهور: <b>'+v.months.j
 +(v.amb.length?'<p class="neg">أسماء مكررة في الهيكل ولم تُحفظ (غيّر اسم أحدهما): '+v.amb.join('، ')+'</p>':'')
 +(v.un.length?'<div class="p"><b>أسماء غير موجودة في الهيكل ('+v.un.length+'):</b> '+v.un.join('، ')+'<div class="chk"><label><input type="checkbox" id="pcr" checked> أنشئها تلقائياً تحت:</label></div><div class="f"><div><select id="pcp">'+flatAll().map(x=>'<option value="'+x.id+'"'+(x.id==='z_sh'?' selected':'')+'>'+'— '.repeat(x.d)+x.n+'</option>').join('')+'</select></div><div><input id="pct" value="محل" placeholder="النوع"></div></div></div>':'')
 +'<p><button class="btn" data-a="ps">حفظ وتوزيع</button></p></div>'}
-function adm(){return '<div class="chips">'+[['tree','الهيكل'],['paste','لصق من الإكسيل'],['users','المستخدمون'],['types','نوعيات التحصيل'],['data','البيانات']].map(x=>'<button data-as="'+x[0]+'" class="'+(S.as===x[0]?'on':'')+'">'+x[1]+'</button>').join('')+'</div>'+({tree,paste,users,types,data}[S.as])()}
+function nmhtml(){const v=S.nm;if(!v)return '';if(v.err)return '<div class="p err">'+v.err+'</div>';return '<div class="p"><h2>المعاينة</h2><p>سيتم إنشاء <b>'+v.create.length+'</b> عنصر جديد، و<b>'+v.reuse+'</b> اسم موجود بالفعل (لن يتكرر).</p><div class="tw"><table>'+v.create.slice(0,80).map(c=>'<tr><td style="padding-right:'+(8+c.d*14)+'px">'+c.name+'</td><td class="mut">'+c.type+'</td></tr>').join('')+'</table></div>'+(v.create.length>80?'<p class="mut">... وباقي العناصر</p>':'')+'<p><button class="btn" data-a="nms">إنشاء الكل</button></p></div>'}
+function names(){return '<div class="p"><h2>إضافة أسماء من جدول</h2><p class="mut">كل سطر اسم واحد بمساره كامل، والفاصل <b>|</b>. مثال:<br><b>شركة زماني | المبيعات | القاهرة | قطاع الجملة | التيلي سيلز | ياسمين</b><br>الأماكن اللي بالفعل موجودة ما بتتكرر، والناقص بيتعمل لوحده.</p><textarea id="nmt" rows="10" placeholder="الصق الأسطر هنا" style="width:100%;font:inherit;background:var(--sf);color:var(--ink);border:1px solid var(--ln);border-radius:8px;padding:8px"></textarea><p><button class="btn" data-a="nmv">معاينة</button></p></div><div id="nma">'+nmhtml()+'</div>'}
+function adm(){return '<div class="chips">'+[['tree','الهيكل'],['names','أسماء من جدول'],['paste','لصق من الإكسيل'],['users','المستخدمون'],['types','نوعيات التحصيل'],['data','البيانات']].map(x=>'<button data-as="'+x[0]+'" class="'+(S.as===x[0]?'on':'')+'">'+x[1]+'</button>').join('')+'</div>'+({tree,names,paste,users,types,data}[S.as])()}
 function render(){const P=ME.perms,T=[];if(P.results)T.push(['res','النتائج'],['rep','التقارير']);if(P.enter)T.push(['in','إدخال التحصيل']);if(P.review)T.push(['rev','المراجعة']);if(P.audit||P.admin)T.push(['aud','السجل']);if(P.admin)T.push(['adm','الإدارة']);
 if(!T.some(t=>t[0]===S.tab))S.tab=T.length?T[0][0]:'none';
 $('#tabs').innerHTML=T.map(t=>'<button data-tab="'+t[0]+'" class="'+(S.tab===t[0]?'on':'')+'">'+t[1]+'</button>').join('');
@@ -92,7 +94,7 @@ async function load(){unsubs.forEach(x=>x());unsubs=[];await loadNodes();
 const ty=await getDoc(doc(db,'meta','types'));TY=ty.exists()?ty.data().list:[];
 HR=[];const qs=ME.scope==='all'?[collection(db,'nh')]:top().map(i=>query(collection(db,'nh'),where('n'+(N[i].path.length-1),'==',i)));
 for(const q of qs)(await getDocs(q)).docs.forEach(d=>(d.data().rows||[]).forEach(r=>{if(N[d.id])HR.push({m:r.m,node:d.id,t:r.t||'',a:r.a,kg:r.kg||0,cu:r.cu||0,nw:r.nw||0})}));
-const M={},push=()=>{const m=new Map();Object.values(M).flat().forEach(o=>m.set(o.id,o));S.live=[...m.values()];if(S.tab==='in'&&$('#mine'))$('#mine').innerHTML=mine();else render()};
+const M={},push=()=>{const m=new Map();Object.values(M).flat().forEach(o=>m.set(o.id,o));S.live=[...m.values()];if(S.tab==='adm')return;if(S.tab==='in'&&$('#mine'))$('#mine').innerHTML=mine();else render()};
 const watch=(key,q)=>unsubs.push(onSnapshot(q,s=>{M[key]=s.docs.map(d=>({id:d.id,...d.data()}));push()},e=>toast(errm(e))));
 if(ME.scope==='all')watch('all',collection(db,'rec'));else top().forEach(i=>watch(i,query(collection(db,'rec'),where('n'+(N[i].path.length-1),'==',i))));
 const ms=months();S.month=S.month||(ms.includes(cm)?cm:(ms[0]||cm));$('#mon').innerHTML=[...new Set([cm,...ms])].sort().reverse().map(m=>'<option>'+m+'</option>').join('');$('#mon').value=S.month;render()}
@@ -107,6 +109,11 @@ async function ensureBase(){const B=[['z_co','شركة زماني','شركة',''
 for(let i=0;i<B.length;i++)if(!N[B[i][0]])await mk(B[i][0],B[i][1],B[i][2],B[i][3],0,i+1);
 if(!TY.length){TY=DT.map((n,i)=>({id:'t'+i,n}));await setDoc(doc(db,'meta','types'),{list:TY})}}
 const saveTY=async()=>{await setDoc(doc(db,'meta','types'),{list:TY})};
+const nk=s=>nz(s).replace(/^قطاع/,'');
+function ntype(n,last,d){if(last)return 'فرد';if(d===0)return 'شركة';if(/^\s*قطاع/.test(n))return 'قطاع';if(/القاهر|سوهاج/.test(nz(n)))return 'منطقة';return 'مجموعة'}
+function planNames(txt){const idx={};NL.forEach(n=>{idx[n.path.map(i=>nk(N[i].name)).join('/')]=n.id});const L=txt.split(/\r?\n/).map(l=>l.split(/\t|\||←|>/).map(x=>x.trim()).filter(Boolean)).filter(p=>p.length>1),create=[],seen={};let reuse=0;
+if(!L.length)throw {message:'الصق سطر واحد على الأقل، والفاصل بين المستويات هو |'};
+L.forEach(p=>{if(p.length>6)throw {message:'السطر أطول من 6 مستويات: '+p.join(' ← ')};let key='',par='';p.forEach((n,d)=>{key+=(d?'/':'')+nk(n);const ex=idx[key]||(seen[key]&&seen[key].id);if(ex){par=ex;if(d===p.length-1)reuse++;return}const id='n'+Date.now().toString(36)+create.length;seen[key]={id};create.push({id,name:n,type:ntype(n,d===p.length-1,d),parent:par,d});par=id})});return {create,reuse}}
 function pdt(s,df){s=String(s||'').trim().replace(/[٠-٩]/g,d=>AR.indexOf(d));if(!s)return null;let m;if(m=s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/))return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
 if(m=s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})/)){const a=+m[1],b=+m[2],d=df?a:b,mo=df?b:a;if(mo>12||d>31)return null;return m[3]+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0')}
 if(/^\d{5}$/.test(s)&&+s>=40000&&+s<=60000)return new Date(Date.UTC(1899,11,30)+(+s)*864e5).toISOString().slice(0,10);return null}
@@ -134,6 +141,8 @@ else{await mk('n'+Date.now().toString(36),nm,ty,nf.parent,t);await audit('إضا
 S.nf=null;await loadNodes();render();toast('تم الحفظ')}catch(e){toast(errm(e))}},
 async nd(){const n=N[S.nf.id];if(n.kids.length){toast('احذف أو انقل العناصر اللي تحته أولاً');return}if(!confirm('حذف «'+n.name+'» وبياناته التاريخية؟ التسجيلات الجديدة تبقى.'))return;try{await deleteDoc(doc(db,'nodes',n.id));try{await deleteDoc(doc(db,'nh',n.id))}catch(e){}await audit('حذف عنصر',n.name);S.nf=null;await loadNodes();render()}catch(e){toast(errm(e))}},
 nx(){S.nf=null;S.nb=null;render()},
+nmv(){try{S.nm=planNames($('#nmt').value)}catch(e){S.nm={err:e.message}}$('#nma').innerHTML=nmhtml()},
+async nms(){const v=S.nm;if(!v||v.err)return;try{for(let i=0;i<v.create.length;i++){const c=v.create[i];await mk(c.id,c.name,c.type,c.parent,0,Date.now()+i)}await audit('إضافة أسماء من جدول',v.create.length+' عنصر');S.nm=null;await loadNodes();render();toast('تم إنشاء '+v.create.length+' عنصر')}catch(e){toast(errm(e))}},
 async dl(id){const n=N[id];if(!n)return;const sb=[...sub(id)];if(!confirm('حذف «'+n.name+'»'+(sb.length>1?' وكل اللي تحته ('+(sb.length-1)+' عنصر)':'')+' وبياناته التاريخية؟'))return;
 try{for(let i=0;i<sb.length;i+=200){const b=writeBatch(db);sb.slice(i,i+200).forEach(x=>{b.delete(doc(db,'nodes',x));b.delete(doc(db,'nh',x))});await b.commit()}await audit('حذف عنصر',n.name+(sb.length>1?' (+'+(sb.length-1)+')':''));await loadNodes();render();toast('تم الحذف')}catch(e){toast(errm(e))}},
 async nbs(){const names=$('#nbl').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),ty=$('#nbt').value.trim()||'عنصر';if(!names.length){toast('اكتب اسم واحد على الأقل');return}
@@ -158,6 +167,13 @@ async ps(){const v=S.pv;if(!v||v.err)return;try{const nmap={};if(v.un.length&&$(
 const tmap={};if(v.newT.length){v.newT.forEach((n,i)=>{const x={id:'t'+Date.now().toString(36)+i,n};TY.push(x);tmap['new:'+n]=x.id});await saveTY()}
 const by={};v.en.forEach(e=>{const id=e.id||nmap[nz(e.name)];if(!id)return;(by[id]=by[id]||[]).push({m:e.m,t:tmap[e.t]||e.t,a:e.a,kg:e.kg,cu:e.cu,nw:e.nw})});
 const n=await writeRows(by);await audit('لصق من الإكسيل','الشهور '+v.months.join(',')+' — '+Object.keys(by).length+' اسم — '+f(n));S.pv=null;toast('تم الحفظ وتوزيع '+f(n));await loadNodes();await load()}catch(e){toast(errm(e))}},
+async su(){const g=i=>$(i),perms={};Object.keys(PL).forEach(k=>perms[k]=g('#c_'+k).checked);const base={name:g('#un').value.trim(),tpl:g('#ut').value,perms,scope:g('#us').value,nodes:[...document.querySelectorAll('.cn:checked')].map(x=>x.value),active:g('#ua').checked};
+try{if(!base.name)throw {message:'اكتب الاسم'};if(S.eu){await updateDoc(doc(db,'users',S.eu),base);await audit('تعديل مستخدم',base.name)}else{const p=ph(g('#up').value);if(p.length<8)throw {message:'رقم موبايل غير صحيح'};
+const sec=initializeApp(firebaseConfig,'sec'+Date.now()),sa=getAuth(sec),c=await createUserWithEmailAndPassword(sa,mail(p),g('#uw').value);await signOut(sa);await setDoc(doc(db,'users',c.user.uid),{...base,phone:p});await audit('إضافة مستخدم',base.name+' ('+(RL[base.tpl]||'')+')')}
+S.eu=null;await rd();render();toast('تم الحفظ')}catch(e){toast(errm(e))}},
+nu(){S.eu=null;render()},
+async ta(){const v=$('#tyadd').value.trim();if(!v){toast('اكتب اسم النوع الأول');return}TY.push({id:'t'+Date.now().toString(36),n:v});try{await saveTY();await audit('إضافة نوع تحصيل',v);render()}catch(e){toast(errm(e))}},
+async ts(){document.querySelectorAll('.tyn').forEach(x=>{const t=TY.find(y=>y.id===x.dataset.id);if(t)t.n=x.value.trim()||t.n});try{await saveTY();await audit('تعديل أسماء الأنواع');toast('تم الحفظ');render()}catch(e){toast(errm(e))}},
 async imp(){const fi=document.createElement('input');fi.type='file';fi.accept='.json';fi.onchange=async()=>{if(!fi.files[0]||!confirm('سيتم استيراد الشهور القديمة وربطها بالأسماء الموجودة (أو إنشاء الناقص). الشهور الموجودة لنفس الاسم تُستبدل. متابعة؟'))return;try{const s=JSON.parse(await fi.files[0].text());await ensureBase();
 const mp={'الصعيد - قطاعي':['z_sh','محل'],'القاهرة - قطاعي':['z_sh','محل'],'القاهرة - جملة':['z_sh','محل'],'مناديب الصعيد':['z_ws','مندوب'],'مناديب - د حسام':['z_ws','مندوب'],'تيلي سيلز':['z_tl','تيلي سيلز']};
 let list=TY.length?[...TY]:DT.map((n,i)=>({id:'t'+i,n}));const tid=n=>{if(!n)return '';let x=list.find(t=>nz(t.n)===nz(n));if(!x){x={id:'t'+Date.now().toString(36)+list.length,n};list.push(x)}return x.id};
