@@ -2,10 +2,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{db}/documents {
     function u() { return get(/databases/$(db)/documents/users/$(request.auth.uid)).data; }
+    function lst(k) { return u().get(k, []); }
     function ok() { return request.auth != null && exists(/databases/$(db)/documents/users/$(request.auth.uid)) && u().active == true; }
     function adm() { return ok() && u().perms.admin == true; }
+    function inTree(d) { return u().scope == 'all' || d.n0 in lst('nodes') || d.n1 in lst('nodes') || d.n2 in lst('nodes') || d.n3 in lst('nodes') || d.n4 in lst('nodes') || d.n5 in lst('nodes'); }
+    function nd() { return get(/databases/$(db)/documents/nodes/$(request.resource.data.node)).data; }
 
-    // أول أدمن فقط: يُنشأ مرة واحدة
     match /meta/config {
       allow read: if request.auth != null;
       allow create: if request.auth != null && request.resource.data.adminUid == request.auth.uid;
@@ -18,21 +20,34 @@ service cloud.firestore {
         (request.auth.uid == uid && get(/databases/$(db)/documents/meta/config).data.adminUid == uid && request.resource.data.perms.admin == true));
       allow update, delete: if adm();
     }
-    match /entities/{id} { allow read: if ok(); allow write: if adm(); }
-    match /hist/{id} {
-      allow read: if ok() && (u().scope == 'all' || id in u().entities);
-      allow write: if adm();
+    match /lk/{p} { allow get: if true; allow list: if false; allow write: if adm(); }
+    match /nodes/{id} { allow read: if ok(); allow write: if adm(); }
+    match /nh/{id} {
+      allow read: if ok() && (inTree(resource.data) || id in lst('enterNodes') || id in lst('reviewNodes') || id in lst('editNodes'));
+      allow update: if adm() || (ok() && u().perms.get('edit', false) == true && id in lst('editNodes')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rows']));
+      allow create, delete: if adm();
     }
-    match /entries/{id} {
-      allow read: if ok() && (u().scope == 'all' || resource.data.ek in u().entities);
+
+    match /rec/{id} {
+      allow read: if ok() && (inTree(resource.data) || resource.data.node in lst('enterNodes') || resource.data.node in lst('reviewNodes') || resource.data.node in lst('editNodes'));
       allow create: if ok() && u().perms.enter == true
-        && request.resource.data.keys().hasOnly(['ek','d','a','p','kg','cu','nw','note','st','by','byName','ts'])
-        && request.resource.data.st == 'pending' && request.resource.data.by == request.auth.uid
-        && request.resource.data.a is number && request.resource.data.a >= 0
-        && (u().scope == 'all' || request.resource.data.ek in u().entities);
-      allow update: if ok() && u().perms.review == true
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['st','rn','rv','rvName','rvUid','a'])
-        && request.resource.data.st in ['approved','rejected','pending'];
+        && request.resource.data.keys().hasOnly(['node','n0','n1','n2','n3','n4','n5','d','am','a','kg','cu','nw','note','st','by','byName','ts','rv','rvName','rvUid'])
+        && request.resource.data.by == request.auth.uid
+        && (request.resource.data.st == 'pending' || (request.resource.data.st == 'approved' && request.resource.data.rvUid == request.auth.uid && (adm() || u().perms.get('quick', false) == true)))
+        && request.resource.data.a is number && request.resource.data.a > 0
+        && (adm() || request.resource.data.node in lst('enterNodes'))
+        && request.resource.data.n0 == nd().n0 && request.resource.data.n1 == nd().n1 && request.resource.data.n2 == nd().n2
+        && request.resource.data.n3 == nd().n3 && request.resource.data.n4 == nd().n4 && request.resource.data.n5 == nd().n5;
+      allow update: if (ok() && u().perms.review == true && (adm() || resource.data.node in lst('reviewNodes'))
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['st','rn','rv','rvName','rvUid'])
+          && request.resource.data.st in ['approved','rejected','pending'])
+        || (adm() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['n0','n1','n2','n3','n4','n5']))
+        || (adm() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['am','a','d','note','kg','cu','nw','st','rn','rv','rvName','rvUid']) && request.resource.data.a is number && request.resource.data.a >= 0)
+        || (ok() && u().perms.get('edit', false) == true && resource.data.node in lst('editNodes')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['am','a','d','note','kg','cu','nw','st','rn','rv','rvName','rvUid'])
+          && (!('st' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.st == 'rejected')
+          && request.resource.data.a is number && request.resource.data.a >= 0);
       allow delete: if false;
     }
     match /audit/{id} {
